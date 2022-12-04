@@ -6,6 +6,7 @@ import 'package:flutter_application/screena.dart';
 import 'package:flutter_application/screenb.dart';
 import 'package:flutterfire_ui/auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,7 +86,9 @@ class MyToast extends StatelessWidget {
 }
 
 class ScreenPage extends StatelessWidget {
-  const ScreenPage({super.key});
+  const ScreenPage({super.key, required this.user_name});
+
+  final AsyncSnapshot<User> user_name;
 
   @override
   Widget build(BuildContext context) {
@@ -102,20 +105,14 @@ class ScreenPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text("data",
+          Text("$user_name",
               style: TextStyle(
                   fontSize: 20, color: Colors.amberAccent, letterSpacing: 2.0)),
           SizedBox(
             height: 10,
             width: 10,
           ),
-          // FadeInImage.assetNetwork(
-          //     placeholder: 'assets/odong.png', image: 'assets/odong2.png'),
-          // Text("data"),
-          // MySnackBar(),
-          // MyToast(),
           ScreenButtonA(),
-          // ScreenButtonB(),
         ],
       )),
     );
@@ -167,20 +164,61 @@ class ScreenButtonB extends StatelessWidget {
 class Authentication extends StatelessWidget {
   const Authentication({super.key});
 
+  Future<UserCredential> signInWithGoogle() async {
+    // Trigger the authentication flow
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
+    // Obtain the auth details from the request
+    final GoogleSignInAuthentication? googleAuth =
+        await googleUser?.authentication;
+
+    // Create a new credential
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth?.accessToken,
+      idToken: googleAuth?.idToken,
+    );
+
+    // Once signed in, return the UserCredential
+    return await FirebaseAuth.instance.signInWithCredential(credential);
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
         stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
+        builder: (context, AsyncSnapshot snapshot) {
           if (!snapshot.hasData) {
-            return SignInScreen(
-              providerConfigs: [
-                //이메일 인증기능
-                EmailProviderConfiguration()
-              ],
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(onPressed: signInWithGoogle, child: Text("구글 로그인"))
+                ],
+              ),
             );
           }
-          return ScreenPage();
+          return Center(
+              child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                  onPressed: () {
+                    FirebaseAuth.instance.signOut();
+                  },
+                  icon: Icon(Icons.logout)),
+              Text("안녕",
+                  style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.amberAccent,
+                      letterSpacing: 2.0)),
+              SizedBox(
+                height: 10,
+                width: 10,
+              ),
+              ScreenButtonA(),
+            ],
+          ));
         });
   }
 }
